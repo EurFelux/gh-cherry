@@ -383,6 +383,80 @@ func UnresolveThread(client ghcli.Querier, threadID string) (*ResolveThreadResul
 	return &ResolveThreadResult{ID: t.ID, IsResolved: t.IsResolved}, nil
 }
 
+// EditCommentResult holds the result of editing a review comment.
+type EditCommentResult struct {
+	ID   string `json:"id"`
+	Body string `json:"body"`
+}
+
+// EditComment updates the body of a pull request review comment.
+func EditComment(client ghcli.Querier, commentID, body string) (*EditCommentResult, error) {
+	query := `mutation($commentId: ID!, $body: String!) {
+		updatePullRequestReviewComment(input: {
+			pullRequestReviewCommentId: $commentId,
+			body: $body
+		}) {
+			pullRequestReviewComment {
+				id
+				body
+			}
+		}
+	}`
+
+	var result struct {
+		UpdatePullRequestReviewComment struct {
+			PullRequestReviewComment struct {
+				ID   string `json:"id"`
+				Body string `json:"body"`
+			} `json:"pullRequestReviewComment"`
+		} `json:"updatePullRequestReviewComment"`
+	}
+
+	if err := client.Query(query, map[string]any{
+		"commentId": commentID,
+		"body":      body,
+	}, &result); err != nil {
+		return nil, fmt.Errorf("edit comment: %w", err)
+	}
+
+	c := result.UpdatePullRequestReviewComment.PullRequestReviewComment
+	return &EditCommentResult{ID: c.ID, Body: c.Body}, nil
+}
+
+// DeleteCommentResult holds the result of deleting a review comment.
+type DeleteCommentResult struct {
+	Deleted string `json:"deleted"`
+}
+
+// DeleteComment deletes a pull request review comment.
+func DeleteComment(client ghcli.Querier, commentID string) (*DeleteCommentResult, error) {
+	query := `mutation($commentId: ID!) {
+		deletePullRequestReviewComment(input: { id: $commentId }) {
+			pullRequestReviewComment {
+				id
+			}
+		}
+	}`
+
+	var result struct {
+		DeletePullRequestReviewComment struct {
+			PullRequestReviewComment struct {
+				ID string `json:"id"`
+			} `json:"pullRequestReviewComment"`
+		} `json:"deletePullRequestReviewComment"`
+	}
+
+	if err := client.Query(query, map[string]any{
+		"commentId": commentID,
+	}, &result); err != nil {
+		return nil, fmt.Errorf("delete comment: %w", err)
+	}
+
+	return &DeleteCommentResult{
+		Deleted: result.DeletePullRequestReviewComment.PullRequestReviewComment.ID,
+	}, nil
+}
+
 func validateSide(side string) error {
 	if !slices.Contains(ValidSides, side) {
 		return fmt.Errorf("invalid side %q, must be LEFT or RIGHT", side)

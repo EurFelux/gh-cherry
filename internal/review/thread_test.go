@@ -472,6 +472,77 @@ func TestUnresolveThread(t *testing.T) {
 	})
 }
 
+func TestEditComment(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mock := &mockQuerier{
+			queryFunc: func(query string, variables map[string]any, result any) error {
+				assert.Contains(t, query, "updatePullRequestReviewComment")
+				assert.Equal(t, "PRRC_123", variables["commentId"])
+				assert.Equal(t, "Updated text", variables["body"])
+
+				data, _ := json.Marshal(map[string]any{
+					"updatePullRequestReviewComment": map[string]any{
+						"pullRequestReviewComment": map[string]any{
+							"id":   "PRRC_123",
+							"body": "Updated text",
+						},
+					},
+				})
+				return json.Unmarshal(data, result)
+			},
+		}
+
+		res, err := EditComment(mock, "PRRC_123", "Updated text")
+		require.NoError(t, err)
+		assert.Equal(t, "PRRC_123", res.ID)
+		assert.Equal(t, "Updated text", res.Body)
+	})
+
+	t.Run("api error", func(t *testing.T) {
+		mock := &mockQuerier{
+			queryFunc: func(_ string, _ map[string]any, _ any) error {
+				return fmt.Errorf("forbidden")
+			},
+		}
+		_, err := EditComment(mock, "PRRC_123", "text")
+		assert.ErrorContains(t, err, "edit comment")
+	})
+}
+
+func TestDeleteComment(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mock := &mockQuerier{
+			queryFunc: func(query string, variables map[string]any, result any) error {
+				assert.Contains(t, query, "deletePullRequestReviewComment")
+				assert.Equal(t, "PRRC_123", variables["commentId"])
+
+				data, _ := json.Marshal(map[string]any{
+					"deletePullRequestReviewComment": map[string]any{
+						"pullRequestReviewComment": map[string]any{
+							"id": "PRRC_123",
+						},
+					},
+				})
+				return json.Unmarshal(data, result)
+			},
+		}
+
+		res, err := DeleteComment(mock, "PRRC_123")
+		require.NoError(t, err)
+		assert.Equal(t, "PRRC_123", res.Deleted)
+	})
+
+	t.Run("api error", func(t *testing.T) {
+		mock := &mockQuerier{
+			queryFunc: func(_ string, _ map[string]any, _ any) error {
+				return fmt.Errorf("not found")
+			},
+		}
+		_, err := DeleteComment(mock, "PRRC_123")
+		assert.ErrorContains(t, err, "delete comment")
+	})
+}
+
 func TestPrintResult(t *testing.T) {
 	var buf bytes.Buffer
 	err := PrintResult(&AddThreadResult{ThreadID: "PRRT_abc"}, &buf)

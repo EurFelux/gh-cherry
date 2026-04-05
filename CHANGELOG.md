@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `gh cherry review thread edit-comment/delete-comment` commands to manage review comments
 - `gh cherry review thread resolve/unresolve` commands to toggle review thread resolution
 - `gh cherry review thread list` command to list review threads with `--unresolved` and `--mine` filters
 - `gh cherry review thread reply` command to reply to existing review threads
