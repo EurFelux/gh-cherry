@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -71,8 +70,8 @@ func init() {
 		Use:   "preview <review-id>",
 		Short: "Preview a pending review's comments before submitting",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			return runReviewPreview(args)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runReviewPreview(cmd, args)
 		},
 	}
 
@@ -125,8 +124,8 @@ func init() {
 		Use:   "resolve <thread-id>",
 		Short: "Resolve a review thread",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			return runReviewThreadResolve(args, true)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runReviewThreadResolve(cmd, args, true)
 		},
 	}
 
@@ -134,8 +133,8 @@ func init() {
 		Use:   "unresolve <thread-id>",
 		Short: "Unresolve a review thread",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			return runReviewThreadResolve(args, false)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runReviewThreadResolve(cmd, args, false)
 		},
 	}
 
@@ -156,8 +155,8 @@ func init() {
 		Use:   "delete-comment <comment-id>",
 		Short: "Delete a review comment",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			return runReviewThreadDeleteComment(args)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runReviewThreadDeleteComment(cmd, args)
 		},
 	}
 
@@ -217,7 +216,7 @@ func runReviewStart(cmd *cobra.Command, args []string) error {
 		fmt.Fprintln(os.Stderr, "warning: --body ignored, reusing existing pending review")
 	}
 
-	return json.NewEncoder(os.Stdout).Encode(result)
+	return encodeJSON(cmd, result)
 }
 
 func runReviewSubmit(cmd *cobra.Command, args []string) error {
@@ -238,7 +237,7 @@ func runReviewSubmit(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return json.NewEncoder(os.Stdout).Encode(result)
+	return encodeJSON(cmd, result)
 }
 
 func runReviewView(cmd *cobra.Command, args []string) error {
@@ -276,7 +275,7 @@ func runReviewView(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return json.NewEncoder(os.Stdout).Encode(result)
+	return encodeJSON(cmd, result)
 }
 
 func runReviewEdit(cmd *cobra.Command, args []string) error {
@@ -295,10 +294,10 @@ func runReviewEdit(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return json.NewEncoder(os.Stdout).Encode(result)
+	return encodeJSON(cmd, result)
 }
 
-func runReviewPreview(args []string) error {
+func runReviewPreview(cmd *cobra.Command, args []string) error {
 	client, err := ghcli.NewClient()
 	if err != nil {
 		return err
@@ -309,7 +308,7 @@ func runReviewPreview(args []string) error {
 		return err
 	}
 
-	return json.NewEncoder(os.Stdout).Encode(result)
+	return encodeJSON(cmd, result)
 }
 
 func runReviewThreadAdd(cmd *cobra.Command, args []string) error {
@@ -342,7 +341,7 @@ func runReviewThreadAdd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return json.NewEncoder(os.Stdout).Encode(result)
+	return encodeJSON(cmd, result)
 }
 
 func runReviewThreadReply(cmd *cobra.Command, args []string) error {
@@ -364,7 +363,7 @@ func runReviewThreadReply(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return json.NewEncoder(os.Stdout).Encode(result)
+	return encodeJSON(cmd, result)
 }
 
 func runReviewThreadList(cmd *cobra.Command, args []string) error {
@@ -398,10 +397,10 @@ func runReviewThreadList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return json.NewEncoder(os.Stdout).Encode(threads)
+	return encodeJSON(cmd, threads)
 }
 
-func runReviewThreadResolve(args []string, resolve bool) error {
+func runReviewThreadResolve(cmd *cobra.Command, args []string, resolve bool) error {
 	client, err := ghcli.NewClient()
 	if err != nil {
 		return err
@@ -417,7 +416,7 @@ func runReviewThreadResolve(args []string, resolve bool) error {
 		return err
 	}
 
-	return json.NewEncoder(os.Stdout).Encode(result)
+	return encodeJSON(cmd, result)
 }
 
 func runReviewThreadEditComment(cmd *cobra.Command, args []string) error {
@@ -436,10 +435,10 @@ func runReviewThreadEditComment(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return json.NewEncoder(os.Stdout).Encode(result)
+	return encodeJSON(cmd, result)
 }
 
-func runReviewThreadDeleteComment(args []string) error {
+func runReviewThreadDeleteComment(cmd *cobra.Command, args []string) error {
 	client, err := ghcli.NewClient()
 	if err != nil {
 		return err
@@ -450,24 +449,5 @@ func runReviewThreadDeleteComment(args []string) error {
 		return err
 	}
 
-	return json.NewEncoder(os.Stdout).Encode(result)
-}
-
-// resolveBody reads the review body from --body or --body-file.
-func resolveBody(cmd *cobra.Command) (string, error) {
-	body, _ := cmd.Flags().GetString("body")
-	if body != "" {
-		return body, nil
-	}
-
-	bodyFile, _ := cmd.Flags().GetString("body-file")
-	if bodyFile == "" {
-		return "", nil
-	}
-
-	data, err := os.ReadFile(bodyFile)
-	if err != nil {
-		return "", fmt.Errorf("read body file: %w", err)
-	}
-	return string(data), nil
+	return encodeJSON(cmd, result)
 }

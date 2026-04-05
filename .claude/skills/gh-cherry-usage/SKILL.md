@@ -223,6 +223,20 @@ Typical flow for reviewing a PR:
 
 | Flag | Short | Available on | Purpose |
 |------|-------|-------------|---------|
+| `--jq` | | all JSON-outputting commands (all review commands) | Filter JSON output with a jq expression |
 | `--repo` | `-R` | start, view, thread list, pr diff, issue create, issue types | Target a different repo (owner/repo) |
 | `--body` | `-b` | start, submit, edit, thread add/reply/edit-comment, issue create | Inline text |
 | `--body-file` | | start, submit, edit, thread add/reply/edit-comment | Read text from file (mutually exclusive with -b) |
+
+### jq Filtering Examples
+
+```bash
+# Get just the review ID after starting a review
+gh cherry review start 123 --jq '.id'
+
+# List only unresolved thread IDs
+gh cherry review thread list 123 --unresolved --jq '.[].id'
+
+# Extract reviewer names from a PR's reviews
+gh cherry review view 123 --jq '.reviews[].author'
+```
