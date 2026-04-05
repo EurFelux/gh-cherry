@@ -2,6 +2,7 @@ package review
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -242,6 +243,160 @@ func TestReplyToThread(t *testing.T) {
 		})
 		assert.ErrorContains(t, err, "reply to thread")
 		assert.ErrorContains(t, err, "network error")
+	})
+}
+
+func TestListThreads(t *testing.T) {
+	// Helper to build a mock that responds to the thread list query.
+	buildListMock := func(threads []ThreadInfo, viewer string) *mockQuerier {
+		return &mockQuerier{
+			queryFunc: func(query string, _ map[string]any, result any) error {
+				if viewer != "" && query == `query { viewer { login } }` {
+					type viewerResp = struct {
+						Viewer struct {
+							Login string `json:"login"`
+						} `json:"viewer"`
+					}
+					r := result.(*viewerResp)
+					r.Viewer.Login = viewer
+					return nil
+				}
+
+				// Use encoding/json to populate the result to avoid type mismatch.
+				type commentNode struct {
+					Author struct {
+						Login string `json:"login"`
+					} `json:"author"`
+					Body string `json:"body"`
+				}
+				type threadNode struct {
+					ID         string `json:"id"`
+					Path       string `json:"path"`
+					Line       int    `json:"line"`
+					IsResolved bool   `json:"isResolved"`
+					Comments   struct {
+						TotalCount int           `json:"totalCount"`
+						Nodes      []commentNode `json:"nodes"`
+					} `json:"comments"`
+				}
+
+				nodes := make([]threadNode, len(threads))
+				for i, t := range threads {
+					n := threadNode{
+						ID:         t.ID,
+						Path:       t.Path,
+						Line:       t.Line,
+						IsResolved: t.IsResolved,
+					}
+					n.Comments.TotalCount = t.CommentCount
+					n.Comments.Nodes = []commentNode{{Body: t.FirstComment.Body}}
+					n.Comments.Nodes[0].Author.Login = t.FirstComment.Author
+					nodes[i] = n
+				}
+
+				payload := map[string]any{
+					"repository": map[string]any{
+						"pullRequest": map[string]any{
+							"reviewThreads": map[string]any{
+								"pageInfo": map[string]any{
+									"hasNextPage": false,
+									"endCursor":   "",
+								},
+								"nodes": nodes,
+							},
+						},
+					},
+				}
+				data, _ := json.Marshal(payload)
+				return json.Unmarshal(data, result)
+			},
+		}
+	}
+
+	sampleThreads := []ThreadInfo{
+		{ID: "PRRT_1", Path: "main.go", Line: 10, IsResolved: false, CommentCount: 2, FirstComment: FirstComment{Author: "alice", Body: "Fix this"}},
+		{ID: "PRRT_2", Path: "main.go", Line: 20, IsResolved: true, CommentCount: 1, FirstComment: FirstComment{Author: "bob", Body: "Looks good"}},
+		{ID: "PRRT_3", Path: "util.go", Line: 5, IsResolved: false, CommentCount: 3, FirstComment: FirstComment{Author: "alice", Body: "Refactor"}},
+	}
+
+	t.Run("list all threads", func(t *testing.T) {
+		mock := buildListMock(sampleThreads, "")
+		threads, err := ListThreads(mock, ListThreadsOptions{
+			Owner: "owner", Repo: "repo", PRNumber: 1,
+		})
+		require.NoError(t, err)
+		assert.Len(t, threads, 3)
+	})
+
+	t.Run("filter unresolved", func(t *testing.T) {
+		mock := buildListMock(sampleThreads, "")
+		threads, err := ListThreads(mock, ListThreadsOptions{
+			Owner: "owner", Repo: "repo", PRNumber: 1,
+			Unresolved: true,
+		})
+		require.NoError(t, err)
+		assert.Len(t, threads, 2)
+		for _, th := range threads {
+			assert.False(t, th.IsResolved)
+		}
+	})
+
+	t.Run("filter mine", func(t *testing.T) {
+		mock := buildListMock(sampleThreads, "alice")
+		threads, err := ListThreads(mock, ListThreadsOptions{
+			Owner: "owner", Repo: "repo", PRNumber: 1,
+			Mine: true,
+		})
+		require.NoError(t, err)
+		assert.Len(t, threads, 2)
+		for _, th := range threads {
+			assert.Equal(t, "alice", th.FirstComment.Author)
+		}
+	})
+
+	t.Run("filter unresolved and mine", func(t *testing.T) {
+		mock := buildListMock(sampleThreads, "bob")
+		threads, err := ListThreads(mock, ListThreadsOptions{
+			Owner: "owner", Repo: "repo", PRNumber: 1,
+			Unresolved: true, Mine: true,
+		})
+		require.NoError(t, err)
+		assert.Empty(t, threads)
+	})
+
+	t.Run("empty result returns empty array", func(t *testing.T) {
+		mock := buildListMock(nil, "")
+		threads, err := ListThreads(mock, ListThreadsOptions{
+			Owner: "owner", Repo: "repo", PRNumber: 1,
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, threads)
+		assert.Empty(t, threads)
+	})
+
+	t.Run("api error", func(t *testing.T) {
+		mock := &mockQuerier{
+			queryFunc: func(_ string, _ map[string]any, _ any) error {
+				return fmt.Errorf("network error")
+			},
+		}
+		_, err := ListThreads(mock, ListThreadsOptions{
+			Owner: "owner", Repo: "repo", PRNumber: 1,
+		})
+		assert.ErrorContains(t, err, "list review threads")
+	})
+
+	t.Run("viewer error", func(t *testing.T) {
+		mock := &mockQuerier{
+			queryFunc: func(_ string, _ map[string]any, _ any) error {
+				return fmt.Errorf("auth error")
+			},
+		}
+		_, err := ListThreads(mock, ListThreadsOptions{
+			Owner: "owner", Repo: "repo", PRNumber: 1,
+			Mine: true,
+		})
+		assert.ErrorContains(t, err, "fetch viewer")
 	})
 }
 

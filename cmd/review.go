@@ -109,12 +109,25 @@ func init() {
 	threadReplyCmd.MarkFlagsMutuallyExclusive("body", "body-file")
 	threadReplyCmd.MarkFlagsOneRequired("body", "body-file")
 
+	threadListCmd := &cobra.Command{
+		Use:   "list <pr-number>",
+		Short: "List review threads for a pull request",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runReviewThreadList(cmd, args)
+		},
+	}
+	threadListCmd.Flags().Bool("unresolved", false, "Only show unresolved threads")
+	threadListCmd.Flags().Bool("mine", false, "Only show threads started by me")
+	threadListCmd.Flags().StringP("repo", "R", "", "Repository in owner/repo format")
+
 	threadCmd := &cobra.Command{
 		Use:   "thread",
 		Short: "Manage review comment threads",
 	}
 	threadCmd.AddCommand(threadAddCmd)
 	threadCmd.AddCommand(threadReplyCmd)
+	threadCmd.AddCommand(threadListCmd)
 
 	reviewCmd := &cobra.Command{
 		Use:   "review",
@@ -308,6 +321,40 @@ func runReviewThreadReply(cmd *cobra.Command, args []string) error {
 	}
 
 	return json.NewEncoder(os.Stdout).Encode(result)
+}
+
+func runReviewThreadList(cmd *cobra.Command, args []string) error {
+	prNumber, err := strconv.Atoi(args[0])
+	if err != nil {
+		return fmt.Errorf("invalid PR number %q: %w", args[0], err)
+	}
+
+	repo, _ := cmd.Flags().GetString("repo")
+	owner, repoName, err := issue.ResolveRepo(repo)
+	if err != nil {
+		return err
+	}
+
+	unresolved, _ := cmd.Flags().GetBool("unresolved")
+	mine, _ := cmd.Flags().GetBool("mine")
+
+	client, err := ghcli.NewClient()
+	if err != nil {
+		return err
+	}
+
+	threads, err := review.ListThreads(client, review.ListThreadsOptions{
+		Owner:      owner,
+		Repo:       repoName,
+		PRNumber:   prNumber,
+		Unresolved: unresolved,
+		Mine:       mine,
+	})
+	if err != nil {
+		return err
+	}
+
+	return json.NewEncoder(os.Stdout).Encode(threads)
 }
 
 // resolveBody reads the review body from --body or --body-file.
