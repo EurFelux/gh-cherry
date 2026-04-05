@@ -34,12 +34,14 @@ prek install
 ## Architecture
 
 - **Entry point**: `main.go` → `cmd.Execute()`
-- **CLI layer** (`cmd/`): Cobra commands. `root.go` defines the root command; subcommand files register themselves via `init()`.
+- **CLI layer** (`cmd/`): Cobra commands. `root.go` defines the root command; subcommand files (`issue.go`, `pr.go`, `review.go`) register themselves via `init()`.
 - **Business logic** (`internal/`):
-  - `ghcli/` — `Querier` (GraphQL) and `RESTQuerier` (REST) interfaces wrapping `go-gh`'s API clients
-  - `issue/` — issue creation with type support. Creates via `gh issue create`, then sets type via GraphQL mutation.
-  - `prdiff/` — annotated PR diff output. Fetches files via REST, parses unified diff patches, formats with L/R line annotations.
-- GraphQL operations go through `ghcli.Querier`, REST through `ghcli.RESTQuerier` (both mockable). Only `gh issue create` uses `gh.Exec()` for its interactive features.
+  - `ghcli/` — `Querier` (GraphQL) and `RESTQuerier` (REST) interfaces wrapping `go-gh`'s API clients. Both are mockable for testing.
+  - `issue/` — issue creation with type support, sub-issue management. Creates via `gh issue create` then sets type via GraphQL mutation. Also: `FetchTypes()`, `AddSubIssue()`, `RemoveSubIssue()`, `ListSubIssues()`.
+  - `prdiff/` — annotated PR diff output. Pipeline: `FetchPRFiles()` (REST) → `AnnotateFile()` (parse unified diff) → `Format()` (L/R line annotations).
+  - `review/` — full PR review lifecycle. `StartReview`, `SubmitReview`, `EditReview`, `PreviewReview`, `ViewReviews`, `AddThread`, `ReplyToThread`. Each returns a typed result struct.
+- GraphQL operations go through `ghcli.Querier`, REST through `ghcli.RESTQuerier`. Only `issue.Create()` uses `gh.Exec()` for its interactive features.
+- All command handlers output JSON via `json.NewEncoder(os.Stdout).Encode()` for consistent, parseable output.
 
 ## Development Rules
 
