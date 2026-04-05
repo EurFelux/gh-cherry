@@ -97,6 +97,50 @@ func PrintResult(result *AddThreadResult, w io.Writer) error {
 	return enc.Encode(result)
 }
 
+// ReplyThreadOptions holds the options for replying to a review thread.
+type ReplyThreadOptions struct {
+	ThreadID string
+	Body     string
+}
+
+// ReplyThreadResult holds the result of replying to a review thread.
+type ReplyThreadResult struct {
+	CommentID string `json:"commentId"`
+}
+
+// ReplyToThread adds a reply to an existing pull request review thread.
+func ReplyToThread(client ghcli.Querier, opts ReplyThreadOptions) (*ReplyThreadResult, error) {
+	query := `mutation($threadId: ID!, $body: String!) {
+		addPullRequestReviewThreadReply(input: {
+			pullRequestReviewThreadId: $threadId,
+			body: $body
+		}) {
+			comment {
+				id
+			}
+		}
+	}`
+
+	var result struct {
+		AddPullRequestReviewThreadReply struct {
+			Comment struct {
+				ID string `json:"id"`
+			} `json:"comment"`
+		} `json:"addPullRequestReviewThreadReply"`
+	}
+
+	if err := client.Query(query, map[string]any{
+		"threadId": opts.ThreadID,
+		"body":     opts.Body,
+	}, &result); err != nil {
+		return nil, fmt.Errorf("reply to thread: %w", err)
+	}
+
+	return &ReplyThreadResult{
+		CommentID: result.AddPullRequestReviewThreadReply.Comment.ID,
+	}, nil
+}
+
 func validateSide(side string) error {
 	if !slices.Contains(ValidSides, side) {
 		return fmt.Errorf("invalid side %q, must be LEFT or RIGHT", side)

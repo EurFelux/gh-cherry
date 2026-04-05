@@ -200,6 +200,51 @@ func TestAddThread(t *testing.T) {
 	})
 }
 
+func TestReplyToThread(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mock := &mockQuerier{
+			queryFunc: func(query string, variables map[string]any, result any) error {
+				assert.Contains(t, query, "addPullRequestReviewThreadReply")
+				assert.Equal(t, "PRRT_123", variables["threadId"])
+				assert.Equal(t, "Good point, fixed.", variables["body"])
+
+				type respType = struct {
+					AddPullRequestReviewThreadReply struct {
+						Comment struct {
+							ID string `json:"id"`
+						} `json:"comment"`
+					} `json:"addPullRequestReviewThreadReply"`
+				}
+				r := result.(*respType)
+				r.AddPullRequestReviewThreadReply.Comment.ID = "PRRC_reply1"
+				return nil
+			},
+		}
+
+		res, err := ReplyToThread(mock, ReplyThreadOptions{
+			ThreadID: "PRRT_123",
+			Body:     "Good point, fixed.",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "PRRC_reply1", res.CommentID)
+	})
+
+	t.Run("api error", func(t *testing.T) {
+		mock := &mockQuerier{
+			queryFunc: func(_ string, _ map[string]any, _ any) error {
+				return fmt.Errorf("network error")
+			},
+		}
+
+		_, err := ReplyToThread(mock, ReplyThreadOptions{
+			ThreadID: "PRRT_123",
+			Body:     "reply",
+		})
+		assert.ErrorContains(t, err, "reply to thread")
+		assert.ErrorContains(t, err, "network error")
+	})
+}
+
 func TestPrintResult(t *testing.T) {
 	var buf bytes.Buffer
 	err := PrintResult(&AddThreadResult{ThreadID: "PRRT_abc"}, &buf)
