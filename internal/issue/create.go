@@ -20,7 +20,6 @@ type CreateOptions struct {
 	Milestone string
 	Projects  []string
 	Type      string
-	Parent    int
 	Repo      string
 	Client    ghcli.Querier
 }
@@ -64,14 +63,6 @@ func Create(opts CreateOptions) error {
 		fmt.Printf("Issue type set to %q\n", opts.Type)
 	}
 
-	if opts.Parent > 0 {
-		if err := addAsSubIssue(opts, issueURL); err != nil {
-			fmt.Printf("Warning: issue created but failed to add as sub-issue of #%d: %v\n", opts.Parent, err)
-		} else {
-			fmt.Printf("Added as sub-issue of #%d\n", opts.Parent)
-		}
-	}
-
 	return nil
 }
 
@@ -102,54 +93,6 @@ func setTypeForNewIssue(opts CreateOptions, issueURL string) error {
 	}
 
 	return SetType(opts.Client, nodeID, issueType.ID)
-}
-
-func addAsSubIssue(opts CreateOptions, issueURL string) error {
-	owner, repo, err := ResolveRepo(opts.Repo)
-	if err != nil {
-		return err
-	}
-
-	number, err := ExtractIssueNumber(issueURL)
-	if err != nil {
-		return err
-	}
-
-	parentNodeID, err := GetIssueNodeID(opts.Client, owner, repo, opts.Parent)
-	if err != nil {
-		return fmt.Errorf("get parent issue node ID: %w", err)
-	}
-
-	childNodeID, err := GetIssueNodeID(opts.Client, owner, repo, number)
-	if err != nil {
-		return fmt.Errorf("get new issue node ID: %w", err)
-	}
-
-	return AddSubIssue(opts.Client, parentNodeID, childNodeID)
-}
-
-// AddSubIssue adds a sub-issue to a parent issue using the GraphQL mutation.
-func AddSubIssue(client ghcli.Querier, parentID, childID string) error {
-	query := `mutation($issueId: ID!, $subIssueId: ID!) {
-		addSubIssue(input: {issueId: $issueId, subIssueId: $subIssueId}) {
-			issue {
-				id
-			}
-		}
-	}`
-
-	var result struct {
-		AddSubIssue struct {
-			Issue struct {
-				ID string `json:"id"`
-			} `json:"issue"`
-		} `json:"addSubIssue"`
-	}
-
-	return client.Query(query, map[string]interface{}{
-		"issueId":    parentID,
-		"subIssueId": childID,
-	}, &result)
 }
 
 // ExtractIssueNumber extracts the issue number from a GitHub issue URL.
