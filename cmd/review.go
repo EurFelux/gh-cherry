@@ -40,6 +40,20 @@ func init() {
 	_ = reviewSubmitCmd.MarkFlagRequired("event")
 	reviewSubmitCmd.MarkFlagsMutuallyExclusive("body", "body-file")
 
+	reviewViewCmd := &cobra.Command{
+		Use:   "view <pr-number>",
+		Short: "View all reviews and threads for a pull request",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runReviewView(cmd, args)
+		},
+	}
+	reviewViewCmd.Flags().String("reviewer", "", "Filter by reviewer login")
+	reviewViewCmd.Flags().String("state", "", "Filter by review state")
+	reviewViewCmd.Flags().Bool("unresolved", false, "Only show unresolved threads")
+	reviewViewCmd.Flags().Int("tail", 0, "Show only last N comments per thread")
+	reviewViewCmd.Flags().StringP("repo", "R", "", "Repository in owner/repo format")
+
 	reviewPreviewCmd := &cobra.Command{
 		Use:   "preview <review-id>",
 		Short: "Preview a pending review's comments before submitting",
@@ -55,6 +69,7 @@ func init() {
 	}
 	reviewCmd.AddCommand(reviewStartCmd)
 	reviewCmd.AddCommand(reviewSubmitCmd)
+	reviewCmd.AddCommand(reviewViewCmd)
 	reviewCmd.AddCommand(reviewPreviewCmd)
 	rootCmd.AddCommand(reviewCmd)
 }
@@ -107,6 +122,44 @@ func runReviewSubmit(cmd *cobra.Command, args []string) error {
 	}
 
 	result, err := review.SubmitReview(client, args[0], event, body)
+	if err != nil {
+		return err
+	}
+
+	return json.NewEncoder(os.Stdout).Encode(result)
+}
+
+func runReviewView(cmd *cobra.Command, args []string) error {
+	prNumber, err := strconv.Atoi(args[0])
+	if err != nil {
+		return fmt.Errorf("invalid PR number %q: %w", args[0], err)
+	}
+
+	repo, _ := cmd.Flags().GetString("repo")
+	owner, repoName, err := issue.ResolveRepo(repo)
+	if err != nil {
+		return err
+	}
+
+	reviewer, _ := cmd.Flags().GetString("reviewer")
+	state, _ := cmd.Flags().GetString("state")
+	unresolved, _ := cmd.Flags().GetBool("unresolved")
+	tail, _ := cmd.Flags().GetInt("tail")
+
+	client, err := ghcli.NewClient()
+	if err != nil {
+		return err
+	}
+
+	result, err := review.ViewReviews(client, review.ViewOptions{
+		Owner:      owner,
+		Repo:       repoName,
+		PRNumber:   prNumber,
+		Reviewer:   reviewer,
+		State:      state,
+		Unresolved: unresolved,
+		Tail:       tail,
+	})
 	if err != nil {
 		return err
 	}
