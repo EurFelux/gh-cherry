@@ -46,6 +46,11 @@ prek install
 - Every feature must include tests
 - Before committing, all changes must be reviewed by the code-reviewer agent until approved
 
+## Branching & Merge Strategy
+
+- **Feature development and bug fixes** must be done on a separate branch, include a CHANGELOG entry, and be squash-merged into `main`
+- **Documentation-only changes** (e.g., CLAUDE.md, README) can be committed directly to `main`
+
 ## Conventions
 
 - Formatter: **gofumpt** with extra rules enabled
