@@ -317,6 +317,72 @@ func fetchViewer(client ghcli.Querier) (string, error) {
 	return result.Viewer.Login, nil
 }
 
+// ResolveThreadResult holds the result of resolving or unresolving a thread.
+type ResolveThreadResult struct {
+	ID         string `json:"id"`
+	IsResolved bool   `json:"isResolved"`
+}
+
+// ResolveThread resolves a review thread.
+func ResolveThread(client ghcli.Querier, threadID string) (*ResolveThreadResult, error) {
+	query := `mutation($threadId: ID!) {
+		resolveReviewThread(input: { threadId: $threadId }) {
+			thread {
+				id
+				isResolved
+			}
+		}
+	}`
+
+	var result struct {
+		ResolveReviewThread struct {
+			Thread struct {
+				ID         string `json:"id"`
+				IsResolved bool   `json:"isResolved"`
+			} `json:"thread"`
+		} `json:"resolveReviewThread"`
+	}
+
+	if err := client.Query(query, map[string]any{
+		"threadId": threadID,
+	}, &result); err != nil {
+		return nil, fmt.Errorf("resolve thread: %w", err)
+	}
+
+	t := result.ResolveReviewThread.Thread
+	return &ResolveThreadResult{ID: t.ID, IsResolved: t.IsResolved}, nil
+}
+
+// UnresolveThread unresolves a review thread.
+func UnresolveThread(client ghcli.Querier, threadID string) (*ResolveThreadResult, error) {
+	query := `mutation($threadId: ID!) {
+		unresolveReviewThread(input: { threadId: $threadId }) {
+			thread {
+				id
+				isResolved
+			}
+		}
+	}`
+
+	var result struct {
+		UnresolveReviewThread struct {
+			Thread struct {
+				ID         string `json:"id"`
+				IsResolved bool   `json:"isResolved"`
+			} `json:"thread"`
+		} `json:"unresolveReviewThread"`
+	}
+
+	if err := client.Query(query, map[string]any{
+		"threadId": threadID,
+	}, &result); err != nil {
+		return nil, fmt.Errorf("unresolve thread: %w", err)
+	}
+
+	t := result.UnresolveReviewThread.Thread
+	return &ResolveThreadResult{ID: t.ID, IsResolved: t.IsResolved}, nil
+}
+
 func validateSide(side string) error {
 	if !slices.Contains(ValidSides, side) {
 		return fmt.Errorf("invalid side %q, must be LEFT or RIGHT", side)
