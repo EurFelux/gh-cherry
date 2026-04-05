@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `gh cherry issue create` command with issue type support (`-T` flag)
 - `gh cherry issue types` command to list available issue types for a repository
 - `gh cherry pr diff` command with annotated L/R line numbers for AI agent review workflows
+- `gh cherry review start` command to create or reuse a pending PR review via GraphQL
 - `ghcli.Querier` interface for mockable GraphQL operations
 - `ghcli.RESTQuerier` interface for mockable REST operations
 - Pre-commit hooks via prek (gofumpt, golangci-lint, typos)
