@@ -9,9 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `gh cherry issue create` command with issue type support
-- GraphQL-based issue type mutation via `go-gh` client
+- `gh cherry issue create` command with issue type support (`-T` flag)
+- `gh cherry issue types` command to list available issue types for a repository
 - `ghcli.Querier` interface for mockable GraphQL operations
+- Pre-commit hooks via prek (gofumpt, golangci-lint, typos)
+- CI release workflow with `gh-extension-precompile`
 - MIT license
 
 ### Changed

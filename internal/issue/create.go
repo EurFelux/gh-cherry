@@ -67,7 +67,7 @@ func Create(opts CreateOptions) error {
 }
 
 func setTypeForNewIssue(opts CreateOptions, issueURL string) error {
-	owner, repo, err := resolveRepo(opts.Repo)
+	owner, repo, err := ResolveRepo(opts.Repo)
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,8 @@ func GetIssueNodeID(client ghcli.Querier, owner, repo string, number int) (strin
 	return result.Repository.Issue.ID, nil
 }
 
-func resolveRepo(repoFlag string) (string, string, error) {
+// ResolveRepo resolves owner and repo name from a flag or the current git context.
+func ResolveRepo(repoFlag string) (string, string, error) {
 	if repoFlag != "" {
 		return parseRepoFlag(repoFlag)
 	}

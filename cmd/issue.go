@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/EurFelux/gh-cherry/internal/ghcli"
 	"github.com/EurFelux/gh-cherry/internal/issue"
 	"github.com/spf13/cobra"
@@ -26,11 +28,21 @@ func init() {
 
 	_ = issueCreateCmd.MarkFlagRequired("title")
 
+	issueTypesCmd := &cobra.Command{
+		Use:   "types",
+		Short: "List available issue types for a repository",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runIssueTypes(cmd)
+		},
+	}
+	issueTypesCmd.Flags().StringP("repo", "R", "", "Repository in owner/repo format")
+
 	issueCmd := &cobra.Command{
 		Use:   "issue",
 		Short: "Enhanced issue management",
 	}
 	issueCmd.AddCommand(issueCreateCmd)
+	issueCmd.AddCommand(issueTypesCmd)
 	rootCmd.AddCommand(issueCmd)
 }
 
@@ -66,4 +78,15 @@ func runIssueCreate(cmd *cobra.Command) error {
 		Repo:      getString("repo"),
 		Client:    client,
 	})
+}
+
+func runIssueTypes(cmd *cobra.Command) error {
+	repo, _ := cmd.Flags().GetString("repo")
+
+	client, err := ghcli.NewClient()
+	if err != nil {
+		return err
+	}
+
+	return issue.ListTypes(client, repo, os.Stdout)
 }
