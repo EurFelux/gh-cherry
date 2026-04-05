@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `gh cherry issue sub-issue add/remove/list` commands to manage sub-issue relationships
 - `gh cherry issue create` command with issue type support (`-T` flag)
 - `--parent` / `-P` flag for `issue create` to attach new issue as sub-issue of a parent
 - `gh cherry issue types` command to list available issue types for a repository
