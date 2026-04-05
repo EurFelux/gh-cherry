@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `gh cherry review thread list` command to list review threads with `--unresolved` and `--mine` filters
 - `gh cherry review thread reply` command to reply to existing review threads
 - `gh cherry issue create` command with issue type support (`-T` flag)
 - `gh cherry issue types` command to list available issue types for a repository

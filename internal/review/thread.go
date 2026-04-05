@@ -141,6 +141,182 @@ func ReplyToThread(client ghcli.Querier, opts ReplyThreadOptions) (*ReplyThreadR
 	}, nil
 }
 
+// ListThreadsOptions holds the options for listing review threads.
+type ListThreadsOptions struct {
+	Owner      string
+	Repo       string
+	PRNumber   int
+	Unresolved bool
+	Mine       bool
+}
+
+// ThreadInfo represents a review thread in the list output.
+type ThreadInfo struct {
+	ID           string       `json:"id"`
+	Path         string       `json:"path"`
+	Line         int          `json:"line"`
+	IsResolved   bool         `json:"isResolved"`
+	CommentCount int          `json:"commentCount"`
+	FirstComment FirstComment `json:"firstComment"`
+}
+
+// FirstComment represents the first comment in a thread.
+type FirstComment struct {
+	Author string `json:"author"`
+	Body   string `json:"body"`
+}
+
+// ListThreads lists all review threads for a pull request.
+func ListThreads(client ghcli.Querier, opts ListThreadsOptions) ([]ThreadInfo, error) {
+	var viewer string
+	if opts.Mine {
+		v, err := fetchViewer(client)
+		if err != nil {
+			return nil, err
+		}
+		viewer = v
+	}
+
+	var allThreads []ThreadInfo
+	var cursor *string
+
+	for {
+		threads, pageInfo, err := fetchThreadPage(client, opts.Owner, opts.Repo, opts.PRNumber, cursor)
+		if err != nil {
+			return nil, fmt.Errorf("list review threads: %w", err)
+		}
+
+		for _, t := range threads {
+			if opts.Unresolved && t.IsResolved {
+				continue
+			}
+			if opts.Mine && t.FirstComment.Author != viewer {
+				continue
+			}
+			allThreads = append(allThreads, t)
+		}
+
+		if !pageInfo.HasNextPage {
+			break
+		}
+		cursor = &pageInfo.EndCursor
+	}
+
+	if allThreads == nil {
+		allThreads = []ThreadInfo{}
+	}
+
+	return allThreads, nil
+}
+
+type pageInfo struct {
+	HasNextPage bool   `json:"hasNextPage"`
+	EndCursor   string `json:"endCursor"`
+}
+
+func fetchThreadPage(client ghcli.Querier, owner, repo string, prNumber int, after *string) ([]ThreadInfo, pageInfo, error) {
+	query := `query($owner: String!, $repo: String!, $number: Int!, $after: String) {
+		repository(owner: $owner, name: $repo) {
+			pullRequest(number: $number) {
+				reviewThreads(first: 100, after: $after) {
+					pageInfo {
+						hasNextPage
+						endCursor
+					}
+					nodes {
+						id
+						path
+						line
+						isResolved
+						comments(first: 1) {
+							totalCount
+							nodes {
+								author { login }
+								body
+							}
+						}
+					}
+				}
+			}
+		}
+	}`
+
+	vars := map[string]any{
+		"owner":  owner,
+		"repo":   repo,
+		"number": prNumber,
+	}
+	if after != nil {
+		vars["after"] = *after
+	}
+
+	var result struct {
+		Repository struct {
+			PullRequest struct {
+				ReviewThreads struct {
+					PageInfo pageInfo `json:"pageInfo"`
+					Nodes    []struct {
+						ID         string `json:"id"`
+						Path       string `json:"path"`
+						Line       int    `json:"line"`
+						IsResolved bool   `json:"isResolved"`
+						Comments   struct {
+							TotalCount int `json:"totalCount"`
+							Nodes      []struct {
+								Author struct {
+									Login string `json:"login"`
+								} `json:"author"`
+								Body string `json:"body"`
+							} `json:"nodes"`
+						} `json:"comments"`
+					} `json:"nodes"`
+				} `json:"reviewThreads"`
+			} `json:"pullRequest"`
+		} `json:"repository"`
+	}
+
+	if err := client.Query(query, vars, &result); err != nil {
+		return nil, pageInfo{}, err
+	}
+
+	nodes := result.Repository.PullRequest.ReviewThreads.Nodes
+	threads := make([]ThreadInfo, 0, len(nodes))
+	for _, n := range nodes {
+		t := ThreadInfo{
+			ID:           n.ID,
+			Path:         n.Path,
+			Line:         n.Line,
+			IsResolved:   n.IsResolved,
+			CommentCount: n.Comments.TotalCount,
+		}
+		if len(n.Comments.Nodes) > 0 {
+			t.FirstComment = FirstComment{
+				Author: n.Comments.Nodes[0].Author.Login,
+				Body:   n.Comments.Nodes[0].Body,
+			}
+		}
+		threads = append(threads, t)
+	}
+
+	return threads, result.Repository.PullRequest.ReviewThreads.PageInfo, nil
+}
+
+func fetchViewer(client ghcli.Querier) (string, error) {
+	query := `query { viewer { login } }`
+
+	var result struct {
+		Viewer struct {
+			Login string `json:"login"`
+		} `json:"viewer"`
+	}
+
+	if err := client.Query(query, nil, &result); err != nil {
+		return "", fmt.Errorf("fetch viewer: %w", err)
+	}
+
+	return result.Viewer.Login, nil
+}
+
 func validateSide(side string) error {
 	if !slices.Contains(ValidSides, side) {
 		return fmt.Errorf("invalid side %q, must be LEFT or RIGHT", side)
