@@ -8,14 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type mockQuerier struct {
-	queryFunc func(query string, variables map[string]interface{}, result interface{}) error
-}
-
-func (m *mockQuerier) Query(query string, variables map[string]interface{}, result interface{}) error {
-	return m.queryFunc(query, variables, result)
-}
-
 // fetchResp matches the anonymous struct type used in fetchPRAndPendingReview.
 type fetchResp = struct {
 	Repository struct {
