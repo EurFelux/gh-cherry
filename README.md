@@ -58,6 +58,10 @@ gh cherry review edit 123 <review-id> --body "Updated feedback"
 gh cherry review thread reply 123 <thread-id> --body "Thanks, fixed"
 ```
 
+## Claude Code Skill
+
+This repo includes a [Claude Code skill](https://docs.anthropic.com/en/docs/claude-code/skills) at `.claude/skills/gh-cherry-usage/` that teaches Claude how to use `gh cherry` commands. Once installed, Claude can assist with issue creation, PR reviews, and diff viewing through natural language.
+
 ## Building from source
 
 ```bash
