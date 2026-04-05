@@ -54,6 +54,19 @@ func init() {
 	reviewViewCmd.Flags().Int("tail", 0, "Show only last N comments per thread")
 	reviewViewCmd.Flags().StringP("repo", "R", "", "Repository in owner/repo format")
 
+	reviewEditCmd := &cobra.Command{
+		Use:   "edit <review-id>",
+		Short: "Edit a submitted review's body text",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runReviewEdit(cmd, args)
+		},
+	}
+	reviewEditCmd.Flags().StringP("body", "b", "", "New review body")
+	reviewEditCmd.Flags().String("body-file", "", "Read body from file")
+	reviewEditCmd.MarkFlagsMutuallyExclusive("body", "body-file")
+	reviewEditCmd.MarkFlagsOneRequired("body", "body-file")
+
 	reviewPreviewCmd := &cobra.Command{
 		Use:   "preview <review-id>",
 		Short: "Preview a pending review's comments before submitting",
@@ -110,6 +123,7 @@ func init() {
 	reviewCmd.AddCommand(reviewStartCmd)
 	reviewCmd.AddCommand(reviewSubmitCmd)
 	reviewCmd.AddCommand(reviewViewCmd)
+	reviewCmd.AddCommand(reviewEditCmd)
 	reviewCmd.AddCommand(reviewPreviewCmd)
 	reviewCmd.AddCommand(threadCmd)
 	rootCmd.AddCommand(reviewCmd)
@@ -201,6 +215,25 @@ func runReviewView(cmd *cobra.Command, args []string) error {
 		Unresolved: unresolved,
 		Tail:       tail,
 	})
+	if err != nil {
+		return err
+	}
+
+	return json.NewEncoder(os.Stdout).Encode(result)
+}
+
+func runReviewEdit(cmd *cobra.Command, args []string) error {
+	body, err := resolveBody(cmd)
+	if err != nil {
+		return err
+	}
+
+	client, err := ghcli.NewClient()
+	if err != nil {
+		return err
+	}
+
+	result, err := review.EditReview(client, args[0], body)
 	if err != nil {
 		return err
 	}
