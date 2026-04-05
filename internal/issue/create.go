@@ -21,6 +21,7 @@ type CreateOptions struct {
 	Projects  []string
 	Type      string
 	Repo      string
+	Client    ghcli.Querier
 }
 
 // Create creates a new issue, optionally setting the issue type.
@@ -71,12 +72,7 @@ func setTypeForNewIssue(opts CreateOptions, issueURL string) error {
 		return err
 	}
 
-	client, err := ghcli.NewClient()
-	if err != nil {
-		return err
-	}
-
-	types, err := FetchTypes(client, owner, repo)
+	types, err := FetchTypes(opts.Client, owner, repo)
 	if err != nil {
 		return fmt.Errorf("fetch issue types: %w", err)
 	}
@@ -91,12 +87,12 @@ func setTypeForNewIssue(opts CreateOptions, issueURL string) error {
 		return err
 	}
 
-	nodeID, err := GetIssueNodeID(client, owner, repo, number)
+	nodeID, err := GetIssueNodeID(opts.Client, owner, repo, number)
 	if err != nil {
 		return fmt.Errorf("get issue node ID: %w", err)
 	}
 
-	return SetType(client, nodeID, issueType.ID)
+	return SetType(opts.Client, nodeID, issueType.ID)
 }
 
 // ExtractIssueNumber extracts the issue number from a GitHub issue URL.
@@ -114,7 +110,7 @@ func ExtractIssueNumber(issueURL string) (int, error) {
 }
 
 // GetIssueNodeID fetches the node ID of an issue by its number via GraphQL.
-func GetIssueNodeID(client *ghcli.Client, owner, repo string, number int) (string, error) {
+func GetIssueNodeID(client ghcli.Querier, owner, repo string, number int) (string, error) {
 	query := `query($owner: String!, $repo: String!, $number: Int!) {
 		repository(owner: $owner, name: $repo) {
 			issue(number: $number) {

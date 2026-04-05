@@ -1,6 +1,7 @@
 package issue
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -103,4 +104,52 @@ func TestParseRepoFlag(t *testing.T) {
 			assert.Equal(t, tt.wantRepo, repo)
 		})
 	}
+}
+
+func TestGetIssueNodeID(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mock := &mockQuerier{
+			queryFunc: func(_ string, variables map[string]interface{}, result interface{}) error {
+				assert.Equal(t, "owner", variables["owner"])
+				assert.Equal(t, "repo", variables["repo"])
+				assert.Equal(t, 42, variables["number"])
+				type respType = struct {
+					Repository struct {
+						Issue struct {
+							ID string `json:"id"`
+						} `json:"issue"`
+					} `json:"repository"`
+				}
+				r := result.(*respType)
+				r.Repository.Issue.ID = "I_abc123"
+				return nil
+			},
+		}
+
+		id, err := GetIssueNodeID(mock, "owner", "repo", 42)
+		require.NoError(t, err)
+		assert.Equal(t, "I_abc123", id)
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		mock := &mockQuerier{
+			queryFunc: func(_ string, _ map[string]interface{}, _ interface{}) error {
+				return nil // empty response, ID stays ""
+			},
+		}
+
+		_, err := GetIssueNodeID(mock, "owner", "repo", 999)
+		assert.ErrorContains(t, err, "issue #999 not found")
+	})
+
+	t.Run("api error", func(t *testing.T) {
+		mock := &mockQuerier{
+			queryFunc: func(_ string, _ map[string]interface{}, _ interface{}) error {
+				return fmt.Errorf("timeout")
+			},
+		}
+
+		_, err := GetIssueNodeID(mock, "owner", "repo", 1)
+		assert.ErrorContains(t, err, "timeout")
+	})
 }

@@ -1,22 +1,20 @@
 package cmd
 
 import (
+	"github.com/EurFelux/gh-cherry/internal/ghcli"
 	"github.com/EurFelux/gh-cherry/internal/issue"
 	"github.com/spf13/cobra"
 )
 
-var issueCmd = &cobra.Command{
-	Use:   "issue",
-	Short: "Enhanced issue management",
-}
-
-var issueCreateCmd = &cobra.Command{
-	Use:   "create",
-	Short: "Create an issue with optional type support",
-	RunE:  runIssueCreate,
-}
-
 func init() {
+	issueCreateCmd := &cobra.Command{
+		Use:   "create",
+		Short: "Create an issue with optional type support",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runIssueCreate(cmd)
+		},
+	}
+
 	issueCreateCmd.Flags().StringP("title", "t", "", "Issue title (required)")
 	issueCreateCmd.Flags().StringP("body", "b", "", "Issue body")
 	issueCreateCmd.Flags().StringSliceP("label", "l", nil, "Labels to add")
@@ -28,28 +26,44 @@ func init() {
 
 	_ = issueCreateCmd.MarkFlagRequired("title")
 
+	issueCmd := &cobra.Command{
+		Use:   "issue",
+		Short: "Enhanced issue management",
+	}
 	issueCmd.AddCommand(issueCreateCmd)
 	rootCmd.AddCommand(issueCmd)
 }
 
-func runIssueCreate(cmd *cobra.Command, _ []string) error {
-	title, _ := cmd.Flags().GetString("title")
-	body, _ := cmd.Flags().GetString("body")
-	labels, _ := cmd.Flags().GetStringSlice("label")
-	assignees, _ := cmd.Flags().GetStringSlice("assignee")
-	milestone, _ := cmd.Flags().GetString("milestone")
-	projects, _ := cmd.Flags().GetStringSlice("project")
-	typeName, _ := cmd.Flags().GetString("type")
-	repo, _ := cmd.Flags().GetString("repo")
+func runIssueCreate(cmd *cobra.Command) error {
+	getString := func(name string) string {
+		v, _ := cmd.Flags().GetString(name)
+		return v
+	}
+	getStringSlice := func(name string) []string {
+		v, _ := cmd.Flags().GetStringSlice(name)
+		return v
+	}
+
+	typeName := getString("type")
+
+	var client ghcli.Querier
+	if typeName != "" {
+		c, err := ghcli.NewClient()
+		if err != nil {
+			return err
+		}
+		client = c
+	}
 
 	return issue.Create(issue.CreateOptions{
-		Title:     title,
-		Body:      body,
-		Labels:    labels,
-		Assignees: assignees,
-		Milestone: milestone,
-		Projects:  projects,
+		Title:     getString("title"),
+		Body:      getString("body"),
+		Labels:    getStringSlice("label"),
+		Assignees: getStringSlice("assignee"),
+		Milestone: getString("milestone"),
+		Projects:  getStringSlice("project"),
 		Type:      typeName,
-		Repo:      repo,
+		Repo:      getString("repo"),
+		Client:    client,
 	})
 }

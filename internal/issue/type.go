@@ -13,10 +13,10 @@ type Type struct {
 }
 
 // FetchTypes fetches available issue types for a repository.
-func FetchTypes(client *ghcli.Client, owner, repo string) ([]Type, error) {
+func FetchTypes(client ghcli.Querier, owner, repo string) ([]Type, error) {
 	query := `query($owner: String!, $repo: String!) {
 		repository(owner: $owner, name: $repo) {
-			issueTypes {
+			issueTypes(first: 50) {
 				nodes {
 					id
 					name
@@ -44,7 +44,7 @@ func FetchTypes(client *ghcli.Client, owner, repo string) ([]Type, error) {
 }
 
 // SetType sets the type of an issue using GraphQL mutation.
-func SetType(client *ghcli.Client, issueID, issueTypeID string) error {
+func SetType(client ghcli.Querier, issueID, issueTypeID string) error {
 	query := `mutation($issueId: ID!, $issueTypeId: ID!) {
 		updateIssue(input: {id: $issueId, issueTypeId: $issueTypeId}) {
 			issue {

@@ -6,6 +6,11 @@ import (
 	"github.com/cli/go-gh/v2/pkg/api"
 )
 
+// Querier executes GraphQL queries against the GitHub API.
+type Querier interface {
+	Query(query string, variables map[string]interface{}, result interface{}) error
+}
+
 // Client wraps a GitHub GraphQL client.
 type Client struct {
 	gql *api.GraphQLClient

@@ -36,9 +36,9 @@ prek install
 - **Entry point**: `main.go` → `cmd.Execute()`
 - **CLI layer** (`cmd/`): Cobra commands. `root.go` defines the root command; subcommand files register themselves via `init()`.
 - **Business logic** (`internal/`):
-  - `ghcli/` — thin wrapper around `gh api graphql` for executing GraphQL queries
+  - `ghcli/` — `Querier` interface + `Client` wrapping `go-gh`'s `api.DefaultGraphQLClient()`
   - `issue/` — issue creation with type support. Creates via `gh issue create`, then sets type via GraphQL mutation.
-- GitHub API interactions use `gh.Exec()` (shelling out to `gh`) or GraphQL via `internal/ghcli`.
+- GraphQL operations go through `ghcli.Querier` interface (mockable in tests). Only `gh issue create` uses `gh.Exec()` for its interactive features.
 
 ## Development Rules
 
