@@ -40,12 +40,22 @@ func init() {
 	_ = reviewSubmitCmd.MarkFlagRequired("event")
 	reviewSubmitCmd.MarkFlagsMutuallyExclusive("body", "body-file")
 
+	reviewPreviewCmd := &cobra.Command{
+		Use:   "preview <review-id>",
+		Short: "Preview a pending review's comments before submitting",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runReviewPreview(args)
+		},
+	}
+
 	reviewCmd := &cobra.Command{
 		Use:   "review",
 		Short: "PR review operations",
 	}
 	reviewCmd.AddCommand(reviewStartCmd)
 	reviewCmd.AddCommand(reviewSubmitCmd)
+	reviewCmd.AddCommand(reviewPreviewCmd)
 	rootCmd.AddCommand(reviewCmd)
 }
 
@@ -97,6 +107,20 @@ func runReviewSubmit(cmd *cobra.Command, args []string) error {
 	}
 
 	result, err := review.SubmitReview(client, args[0], event, body)
+	if err != nil {
+		return err
+	}
+
+	return json.NewEncoder(os.Stdout).Encode(result)
+}
+
+func runReviewPreview(args []string) error {
+	client, err := ghcli.NewClient()
+	if err != nil {
+		return err
+	}
+
+	result, err := review.PreviewReview(client, args[0])
 	if err != nil {
 		return err
 	}

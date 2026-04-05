@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `gh cherry pr diff` command with annotated L/R line numbers for AI agent review workflows
 - `gh cherry review start` command to create or reuse a pending PR review via GraphQL
 - `gh cherry review submit` command to submit a pending review with APPROVE/REQUEST_CHANGES/COMMENT
+- `gh cherry review preview` command to preview pending review comments before submitting
 - `ghcli.Querier` interface for mockable GraphQL operations
 - `ghcli.RESTQuerier` interface for mockable REST operations
 - Pre-commit hooks via prek (gofumpt, golangci-lint, typos)
