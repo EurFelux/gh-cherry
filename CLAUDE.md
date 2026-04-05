@@ -36,9 +36,10 @@ prek install
 - **Entry point**: `main.go` → `cmd.Execute()`
 - **CLI layer** (`cmd/`): Cobra commands. `root.go` defines the root command; subcommand files register themselves via `init()`.
 - **Business logic** (`internal/`):
-  - `ghcli/` — `Querier` interface + `Client` wrapping `go-gh`'s `api.DefaultGraphQLClient()`
+  - `ghcli/` — `Querier` (GraphQL) and `RESTQuerier` (REST) interfaces wrapping `go-gh`'s API clients
   - `issue/` — issue creation with type support. Creates via `gh issue create`, then sets type via GraphQL mutation.
-- GraphQL operations go through `ghcli.Querier` interface (mockable in tests). Only `gh issue create` uses `gh.Exec()` for its interactive features.
+  - `prdiff/` — annotated PR diff output. Fetches files via REST, parses unified diff patches, formats with L/R line annotations.
+- GraphQL operations go through `ghcli.Querier`, REST through `ghcli.RESTQuerier` (both mockable). Only `gh issue create` uses `gh.Exec()` for its interactive features.
 
 ## Development Rules
 
