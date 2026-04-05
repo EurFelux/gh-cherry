@@ -139,6 +139,28 @@ func init() {
 		},
 	}
 
+	threadEditCommentCmd := &cobra.Command{
+		Use:   "edit-comment <comment-id>",
+		Short: "Edit a review comment's body",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runReviewThreadEditComment(cmd, args)
+		},
+	}
+	threadEditCommentCmd.Flags().StringP("body", "b", "", "New comment body")
+	threadEditCommentCmd.Flags().String("body-file", "", "Read body from file")
+	threadEditCommentCmd.MarkFlagsMutuallyExclusive("body", "body-file")
+	threadEditCommentCmd.MarkFlagsOneRequired("body", "body-file")
+
+	threadDeleteCommentCmd := &cobra.Command{
+		Use:   "delete-comment <comment-id>",
+		Short: "Delete a review comment",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runReviewThreadDeleteComment(args)
+		},
+	}
+
 	threadCmd := &cobra.Command{
 		Use:   "thread",
 		Short: "Manage review comment threads",
@@ -148,6 +170,8 @@ func init() {
 	threadCmd.AddCommand(threadListCmd)
 	threadCmd.AddCommand(threadResolveCmd)
 	threadCmd.AddCommand(threadUnresolveCmd)
+	threadCmd.AddCommand(threadEditCommentCmd)
+	threadCmd.AddCommand(threadDeleteCommentCmd)
 
 	reviewCmd := &cobra.Command{
 		Use:   "review",
@@ -389,6 +413,39 @@ func runReviewThreadResolve(args []string, resolve bool) error {
 	} else {
 		result, err = review.UnresolveThread(client, args[0])
 	}
+	if err != nil {
+		return err
+	}
+
+	return json.NewEncoder(os.Stdout).Encode(result)
+}
+
+func runReviewThreadEditComment(cmd *cobra.Command, args []string) error {
+	body, err := resolveBody(cmd)
+	if err != nil {
+		return err
+	}
+
+	client, err := ghcli.NewClient()
+	if err != nil {
+		return err
+	}
+
+	result, err := review.EditComment(client, args[0], body)
+	if err != nil {
+		return err
+	}
+
+	return json.NewEncoder(os.Stdout).Encode(result)
+}
+
+func runReviewThreadDeleteComment(args []string) error {
+	client, err := ghcli.NewClient()
+	if err != nil {
+		return err
+	}
+
+	result, err := review.DeleteComment(client, args[0])
 	if err != nil {
 		return err
 	}
