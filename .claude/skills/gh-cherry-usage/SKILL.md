@@ -55,6 +55,19 @@ gh cherry review edit <review-id> -b "Updated text" [--body-file path]
 
 # Reply to an existing review thread
 gh cherry review thread reply <thread-id> -b "Fixed, thanks"
+
+# List review threads on a PR
+gh cherry review thread list 123 [--unresolved] [--mine] [-R owner/repo]
+
+# Resolve / unresolve a thread
+gh cherry review thread resolve <thread-id>
+gh cherry review thread unresolve <thread-id>
+
+# Edit a review comment
+gh cherry review thread edit-comment <comment-id> -b "Updated text"
+
+# Delete a review comment
+gh cherry review thread delete-comment <comment-id>
 ```
 
 ### Review Workflow Example
@@ -71,6 +84,6 @@ Typical flow for reviewing a PR:
 
 | Flag | Short | Available on | Purpose |
 |------|-------|-------------|---------|
-| `--repo` | `-R` | start, view, pr diff, issue | Target a different repo (owner/repo) |
-| `--body` | `-b` | start, submit, edit, thread add/reply, issue create | Inline text |
-| `--body-file` | | start, submit, edit, thread add/reply | Read text from file (mutually exclusive with -b) |
+| `--repo` | `-R` | start, view, thread list, pr diff, issue | Target a different repo (owner/repo) |
+| `--body` | `-b` | start, submit, edit, thread add/reply/edit-comment, issue create | Inline text |
+| `--body-file` | | start, submit, edit, thread add/reply/edit-comment | Read text from file (mutually exclusive with -b) |
