@@ -49,6 +49,46 @@ func init() {
 		},
 	}
 
+	threadAddCmd := &cobra.Command{
+		Use:   "add <review-id>",
+		Short: "Add an inline comment thread to a pending review",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runReviewThreadAdd(cmd, args)
+		},
+	}
+	threadAddCmd.Flags().String("path", "", "File path to comment on")
+	threadAddCmd.Flags().Int("line", 0, "End line number")
+	threadAddCmd.Flags().StringP("body", "b", "", "Comment text")
+	threadAddCmd.Flags().String("body-file", "", "Read body from file")
+	threadAddCmd.Flags().String("side", "", "LEFT or RIGHT (default: RIGHT)")
+	threadAddCmd.Flags().Int("start-line", 0, "Multi-line start line")
+	threadAddCmd.Flags().String("start-side", "", "Multi-line start side (LEFT or RIGHT)")
+	_ = threadAddCmd.MarkFlagRequired("path")
+	_ = threadAddCmd.MarkFlagRequired("line")
+	threadAddCmd.MarkFlagsMutuallyExclusive("body", "body-file")
+	threadAddCmd.MarkFlagsOneRequired("body", "body-file")
+
+	threadReplyCmd := &cobra.Command{
+		Use:   "reply <thread-id>",
+		Short: "Reply to an existing review thread",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runReviewThreadReply(cmd, args)
+		},
+	}
+	threadReplyCmd.Flags().StringP("body", "b", "", "Reply text")
+	threadReplyCmd.Flags().String("body-file", "", "Read body from file")
+	threadReplyCmd.MarkFlagsMutuallyExclusive("body", "body-file")
+	threadReplyCmd.MarkFlagsOneRequired("body", "body-file")
+
+	threadCmd := &cobra.Command{
+		Use:   "thread",
+		Short: "Manage review comment threads",
+	}
+	threadCmd.AddCommand(threadAddCmd)
+	threadCmd.AddCommand(threadReplyCmd)
+
 	reviewCmd := &cobra.Command{
 		Use:   "review",
 		Short: "PR review operations",
@@ -56,6 +96,7 @@ func init() {
 	reviewCmd.AddCommand(reviewStartCmd)
 	reviewCmd.AddCommand(reviewSubmitCmd)
 	reviewCmd.AddCommand(reviewPreviewCmd)
+	reviewCmd.AddCommand(threadCmd)
 	rootCmd.AddCommand(reviewCmd)
 }
 
@@ -121,6 +162,61 @@ func runReviewPreview(args []string) error {
 	}
 
 	result, err := review.PreviewReview(client, args[0])
+	if err != nil {
+		return err
+	}
+
+	return json.NewEncoder(os.Stdout).Encode(result)
+}
+
+func runReviewThreadAdd(cmd *cobra.Command, args []string) error {
+	body, err := resolveBody(cmd)
+	if err != nil {
+		return err
+	}
+
+	path, _ := cmd.Flags().GetString("path")
+	line, _ := cmd.Flags().GetInt("line")
+	side, _ := cmd.Flags().GetString("side")
+	startLine, _ := cmd.Flags().GetInt("start-line")
+	startSide, _ := cmd.Flags().GetString("start-side")
+
+	client, err := ghcli.NewClient()
+	if err != nil {
+		return err
+	}
+
+	result, err := review.AddThread(client, review.AddThreadOptions{
+		ReviewID:  args[0],
+		Path:      path,
+		Line:      line,
+		Body:      body,
+		Side:      side,
+		StartLine: startLine,
+		StartSide: startSide,
+	})
+	if err != nil {
+		return err
+	}
+
+	return json.NewEncoder(os.Stdout).Encode(result)
+}
+
+func runReviewThreadReply(cmd *cobra.Command, args []string) error {
+	body, err := resolveBody(cmd)
+	if err != nil {
+		return err
+	}
+
+	client, err := ghcli.NewClient()
+	if err != nil {
+		return err
+	}
+
+	result, err := review.ReplyToThread(client, review.ReplyThreadOptions{
+		ThreadID: args[0],
+		Body:     body,
+	})
 	if err != nil {
 		return err
 	}
