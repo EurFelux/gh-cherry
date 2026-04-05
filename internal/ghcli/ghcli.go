@@ -29,3 +29,27 @@ func NewClient() (*Client, error) {
 func (c *Client) Query(query string, variables map[string]interface{}, result interface{}) error {
 	return c.gql.Do(query, variables, result)
 }
+
+// RESTQuerier executes REST API requests against the GitHub API.
+type RESTQuerier interface {
+	Get(path string, response interface{}) error
+}
+
+// RESTClient wraps a GitHub REST client.
+type RESTClient struct {
+	rest *api.RESTClient
+}
+
+// NewRESTClient creates a new RESTClient using the default gh authentication.
+func NewRESTClient() (*RESTClient, error) {
+	rest, err := api.DefaultRESTClient()
+	if err != nil {
+		return nil, fmt.Errorf("create rest client: %w", err)
+	}
+	return &RESTClient{rest: rest}, nil
+}
+
+// Get executes a GET request and decodes the JSON response.
+func (c *RESTClient) Get(path string, response interface{}) error {
+	return c.rest.Get(path, response)
+}
