@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `gh cherry issue sub-issue add/remove/list` commands to manage sub-issue relationships
 - `gh cherry issue create` command with issue type support (`-T` flag)
 - `gh cherry issue types` command to list available issue types for a repository
 - `gh cherry pr diff` command with annotated L/R line numbers for AI agent review workflows
