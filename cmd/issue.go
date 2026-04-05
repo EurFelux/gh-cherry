@@ -24,6 +24,7 @@ func init() {
 	issueCreateCmd.Flags().StringP("milestone", "m", "", "Milestone")
 	issueCreateCmd.Flags().StringSliceP("project", "p", nil, "Projects")
 	issueCreateCmd.Flags().StringP("type", "T", "", "Issue type (e.g. Bug, Feature)")
+	issueCreateCmd.Flags().IntP("parent", "P", 0, "Parent issue number to attach as sub-issue")
 	issueCreateCmd.Flags().StringP("repo", "R", "", "Repository in owner/repo format")
 
 	_ = issueCreateCmd.MarkFlagRequired("title")
@@ -57,9 +58,10 @@ func runIssueCreate(cmd *cobra.Command) error {
 	}
 
 	typeName := getString("type")
+	parent, _ := cmd.Flags().GetInt("parent")
 
 	var client ghcli.Querier
-	if typeName != "" {
+	if typeName != "" || parent > 0 {
 		c, err := ghcli.NewClient()
 		if err != nil {
 			return err
@@ -75,6 +77,7 @@ func runIssueCreate(cmd *cobra.Command) error {
 		Milestone: getString("milestone"),
 		Projects:  getStringSlice("project"),
 		Type:      typeName,
+		Parent:    parent,
 		Repo:      getString("repo"),
 		Client:    client,
 	})
