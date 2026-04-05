@@ -46,6 +46,7 @@ prek install
 - Every feature must have a plan approved by the user before implementation
 - Every feature must include tests
 - Before committing, all changes must be reviewed by the code-reviewer agent until approved
+- PR description must include `Fixes #<issue_number>` to auto-close the related issue
 
 ## Branching & Merge Strategy
 
