@@ -106,6 +106,32 @@ func TestParseRepoFlag(t *testing.T) {
 	}
 }
 
+func TestAddSubIssue(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mock := &mockQuerier{
+			queryFunc: func(_ string, variables map[string]interface{}, _ interface{}) error {
+				assert.Equal(t, "I_parent123", variables["issueId"])
+				assert.Equal(t, "I_child456", variables["subIssueId"])
+				return nil
+			},
+		}
+
+		err := AddSubIssue(mock, "I_parent123", "I_child456")
+		require.NoError(t, err)
+	})
+
+	t.Run("api error", func(t *testing.T) {
+		mock := &mockQuerier{
+			queryFunc: func(_ string, _ map[string]interface{}, _ interface{}) error {
+				return fmt.Errorf("forbidden")
+			},
+		}
+
+		err := AddSubIssue(mock, "I_parent123", "I_child456")
+		assert.ErrorContains(t, err, "forbidden")
+	})
+}
+
 func TestGetIssueNodeID(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		mock := &mockQuerier{
