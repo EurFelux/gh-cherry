@@ -400,6 +400,78 @@ func TestListThreads(t *testing.T) {
 	})
 }
 
+func TestResolveThread(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mock := &mockQuerier{
+			queryFunc: func(query string, variables map[string]any, result any) error {
+				assert.Contains(t, query, "resolveReviewThread")
+				assert.Equal(t, "PRRT_123", variables["threadId"])
+
+				data, _ := json.Marshal(map[string]any{
+					"resolveReviewThread": map[string]any{
+						"thread": map[string]any{
+							"id":         "PRRT_123",
+							"isResolved": true,
+						},
+					},
+				})
+				return json.Unmarshal(data, result)
+			},
+		}
+
+		res, err := ResolveThread(mock, "PRRT_123")
+		require.NoError(t, err)
+		assert.Equal(t, "PRRT_123", res.ID)
+		assert.True(t, res.IsResolved)
+	})
+
+	t.Run("api error", func(t *testing.T) {
+		mock := &mockQuerier{
+			queryFunc: func(_ string, _ map[string]any, _ any) error {
+				return fmt.Errorf("network error")
+			},
+		}
+		_, err := ResolveThread(mock, "PRRT_123")
+		assert.ErrorContains(t, err, "resolve thread")
+	})
+}
+
+func TestUnresolveThread(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mock := &mockQuerier{
+			queryFunc: func(query string, variables map[string]any, result any) error {
+				assert.Contains(t, query, "unresolveReviewThread")
+				assert.Equal(t, "PRRT_123", variables["threadId"])
+
+				data, _ := json.Marshal(map[string]any{
+					"unresolveReviewThread": map[string]any{
+						"thread": map[string]any{
+							"id":         "PRRT_123",
+							"isResolved": false,
+						},
+					},
+				})
+				return json.Unmarshal(data, result)
+			},
+		}
+
+		res, err := UnresolveThread(mock, "PRRT_123")
+		require.NoError(t, err)
+		assert.Equal(t, "PRRT_123", res.ID)
+		assert.False(t, res.IsResolved)
+	})
+
+	t.Run("api error", func(t *testing.T) {
+		mock := &mockQuerier{
+			queryFunc: func(_ string, _ map[string]any, _ any) error {
+				return fmt.Errorf("network error")
+			},
+		}
+		_, err := UnresolveThread(mock, "PRRT_123")
+		assert.ErrorContains(t, err, "unresolve thread")
+	})
+}
+
 func TestPrintResult(t *testing.T) {
 	var buf bytes.Buffer
 	err := PrintResult(&AddThreadResult{ThreadID: "PRRT_abc"}, &buf)

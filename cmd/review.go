@@ -121,6 +121,24 @@ func init() {
 	threadListCmd.Flags().Bool("mine", false, "Only show threads started by me")
 	threadListCmd.Flags().StringP("repo", "R", "", "Repository in owner/repo format")
 
+	threadResolveCmd := &cobra.Command{
+		Use:   "resolve <thread-id>",
+		Short: "Resolve a review thread",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runReviewThreadResolve(args, true)
+		},
+	}
+
+	threadUnresolveCmd := &cobra.Command{
+		Use:   "unresolve <thread-id>",
+		Short: "Unresolve a review thread",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			return runReviewThreadResolve(args, false)
+		},
+	}
+
 	threadCmd := &cobra.Command{
 		Use:   "thread",
 		Short: "Manage review comment threads",
@@ -128,6 +146,8 @@ func init() {
 	threadCmd.AddCommand(threadAddCmd)
 	threadCmd.AddCommand(threadReplyCmd)
 	threadCmd.AddCommand(threadListCmd)
+	threadCmd.AddCommand(threadResolveCmd)
+	threadCmd.AddCommand(threadUnresolveCmd)
 
 	reviewCmd := &cobra.Command{
 		Use:   "review",
@@ -355,6 +375,25 @@ func runReviewThreadList(cmd *cobra.Command, args []string) error {
 	}
 
 	return json.NewEncoder(os.Stdout).Encode(threads)
+}
+
+func runReviewThreadResolve(args []string, resolve bool) error {
+	client, err := ghcli.NewClient()
+	if err != nil {
+		return err
+	}
+
+	var result *review.ResolveThreadResult
+	if resolve {
+		result, err = review.ResolveThread(client, args[0])
+	} else {
+		result, err = review.UnresolveThread(client, args[0])
+	}
+	if err != nil {
+		return err
+	}
+
+	return json.NewEncoder(os.Stdout).Encode(result)
 }
 
 // resolveBody reads the review body from --body or --body-file.
