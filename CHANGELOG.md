@@ -19,7 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `gh cherry review thread resolve/unresolve` commands to toggle review thread resolution
 - `gh cherry review thread list` command to list review threads with `--unresolved` and `--mine` filters
 - `gh cherry review thread reply` command to reply to existing review threads
-- `gh cherry issue create` command with issue type support (`-T` flag)
+- `gh cherry issue sub-issue add/remove/list` commands to manage sub-issue relationships
+- `gh cherry issue create` command with issue type support (`-T` flag) and `--parent` flag for sub-issue linking
 - `gh cherry issue types` command to list available issue types for a repository
 - `gh cherry pr diff` command with annotated L/R line numbers for AI agent review workflows
 - `gh cherry review start` command to create or reuse a pending PR review via GraphQL
