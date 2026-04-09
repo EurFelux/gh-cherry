@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/EurFelux/gh-cherry/internal/ghcli"
 	"github.com/EurFelux/gh-cherry/internal/issue"
@@ -37,12 +39,51 @@ func init() {
 	}
 	issueTypesCmd.Flags().StringP("repo", "R", "", "Repository in owner/repo format")
 
+	subissueAddCmd := &cobra.Command{
+		Use:   "add <parent-number> <child-number>",
+		Short: "Add a sub-issue to a parent issue",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runSubIssueAdd(cmd, args)
+		},
+	}
+	subissueAddCmd.Flags().StringP("repo", "R", "", "Repository in owner/repo format")
+
+	subissueRemoveCmd := &cobra.Command{
+		Use:   "remove <parent-number> <child-number>",
+		Short: "Remove a sub-issue from a parent issue",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runSubIssueRemove(cmd, args)
+		},
+	}
+	subissueRemoveCmd.Flags().StringP("repo", "R", "", "Repository in owner/repo format")
+
+	subissueListCmd := &cobra.Command{
+		Use:   "list <issue-number>",
+		Short: "List sub-issues of an issue",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runSubIssueList(cmd, args)
+		},
+	}
+	subissueListCmd.Flags().StringP("repo", "R", "", "Repository in owner/repo format")
+
+	subissueCmd := &cobra.Command{
+		Use:   "subissue",
+		Short: "Manage sub-issues",
+	}
+	subissueCmd.AddCommand(subissueAddCmd)
+	subissueCmd.AddCommand(subissueRemoveCmd)
+	subissueCmd.AddCommand(subissueListCmd)
+
 	issueCmd := &cobra.Command{
 		Use:   "issue",
 		Short: "Enhanced issue management",
 	}
 	issueCmd.AddCommand(issueCreateCmd)
 	issueCmd.AddCommand(issueTypesCmd)
+	issueCmd.AddCommand(subissueCmd)
 	rootCmd.AddCommand(issueCmd)
 }
 
@@ -78,6 +119,97 @@ func runIssueCreate(cmd *cobra.Command) error {
 		Repo:      getString("repo"),
 		Client:    client,
 	})
+}
+
+func parseIssueNumber(s string) (int, error) {
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return 0, fmt.Errorf("invalid issue number %q: %w", s, err)
+	}
+	return n, nil
+}
+
+func runSubIssueAdd(cmd *cobra.Command, args []string) error {
+	parent, err := parseIssueNumber(args[0])
+	if err != nil {
+		return err
+	}
+	child, err := parseIssueNumber(args[1])
+	if err != nil {
+		return err
+	}
+
+	repo, _ := cmd.Flags().GetString("repo")
+	owner, repoName, err := issue.ResolveRepo(repo)
+	if err != nil {
+		return err
+	}
+
+	client, err := ghcli.NewClient()
+	if err != nil {
+		return err
+	}
+
+	result, err := issue.AddSubIssue(client, owner, repoName, parent, child)
+	if err != nil {
+		return err
+	}
+
+	return encodeJSON(cmd, result)
+}
+
+func runSubIssueRemove(cmd *cobra.Command, args []string) error {
+	parent, err := parseIssueNumber(args[0])
+	if err != nil {
+		return err
+	}
+	child, err := parseIssueNumber(args[1])
+	if err != nil {
+		return err
+	}
+
+	repo, _ := cmd.Flags().GetString("repo")
+	owner, repoName, err := issue.ResolveRepo(repo)
+	if err != nil {
+		return err
+	}
+
+	client, err := ghcli.NewClient()
+	if err != nil {
+		return err
+	}
+
+	result, err := issue.RemoveSubIssue(client, owner, repoName, parent, child)
+	if err != nil {
+		return err
+	}
+
+	return encodeJSON(cmd, result)
+}
+
+func runSubIssueList(cmd *cobra.Command, args []string) error {
+	issueNumber, err := parseIssueNumber(args[0])
+	if err != nil {
+		return err
+	}
+
+	repo, _ := cmd.Flags().GetString("repo")
+	owner, repoName, err := issue.ResolveRepo(repo)
+	if err != nil {
+		return err
+	}
+
+	client, err := ghcli.NewClient()
+	if err != nil {
+		return err
+	}
+
+	result, err := issue.ListSubIssues(client, owner, repoName, issueNumber)
+	if err != nil {
+		return err
+	}
+
+	return encodeJSON(cmd, result)
 }
 
 func runIssueTypes(cmd *cobra.Command) error {
