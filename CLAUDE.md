@@ -46,10 +46,12 @@ prek install
 ## Development Rules
 
 - Every feature must have a plan approved by the user before implementation
+- Use **TDD (Test-Driven Development)**: write tests first, then implement — this applies to all layers including `cmd/` command registration
 - Every feature must include tests
 - Before committing, all changes must be reviewed by the code-reviewer agent until approved
 - PR description must include `Fixes #<issue_number>` to auto-close the related issue
 - Resolving CHANGELOG.md merge conflicts: must preserve all existing entries, never drop historical records
+- When adding new business logic in `internal/`, always register the corresponding CLI subcommand in `cmd/` — unregistered functions are invisible to users
 
 ## Branching & Merge Strategy
 

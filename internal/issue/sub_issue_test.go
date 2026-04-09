@@ -1,10 +1,7 @@
 package issue
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -56,12 +53,8 @@ func TestAddSubIssue(t *testing.T) {
 			},
 		}
 
-		var buf bytes.Buffer
-		err := AddSubIssue(mock, "owner", "repo", 1, 4, &buf)
+		got, err := AddSubIssue(mock, "owner", "repo", 1, 4)
 		require.NoError(t, err)
-
-		var got SubIssueResult
-		require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
 		assert.Equal(t, 1, got.Parent)
 		assert.Equal(t, 4, got.Child)
 		assert.Equal(t, "added", got.Action)
@@ -78,8 +71,7 @@ func TestAddSubIssue(t *testing.T) {
 			},
 		}
 
-		var buf bytes.Buffer
-		err := AddSubIssue(mock, "owner", "repo", 1, 4, &buf)
+		_, err := AddSubIssue(mock, "owner", "repo", 1, 4)
 		assert.ErrorContains(t, err, "permission denied")
 	})
 
@@ -90,8 +82,7 @@ func TestAddSubIssue(t *testing.T) {
 			},
 		}
 
-		var buf bytes.Buffer
-		err := AddSubIssue(mock, "owner", "repo", 999, 4, &buf)
+		_, err := AddSubIssue(mock, "owner", "repo", 999, 4)
 		assert.ErrorContains(t, err, "resolve parent issue")
 	})
 }
@@ -114,12 +105,8 @@ func TestRemoveSubIssue(t *testing.T) {
 			},
 		}
 
-		var buf bytes.Buffer
-		err := RemoveSubIssue(mock, "owner", "repo", 1, 4, &buf)
+		got, err := RemoveSubIssue(mock, "owner", "repo", 1, 4)
 		require.NoError(t, err)
-
-		var got SubIssueResult
-		require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
 		assert.Equal(t, 1, got.Parent)
 		assert.Equal(t, 4, got.Child)
 		assert.Equal(t, "removed", got.Action)
@@ -136,8 +123,7 @@ func TestRemoveSubIssue(t *testing.T) {
 			},
 		}
 
-		var buf bytes.Buffer
-		err := RemoveSubIssue(mock, "owner", "repo", 1, 4, &buf)
+		_, err := RemoveSubIssue(mock, "owner", "repo", 1, 4)
 		assert.ErrorContains(t, err, "not found")
 	})
 }
@@ -170,16 +156,13 @@ func TestListSubIssues(t *testing.T) {
 			},
 		}
 
-		var buf bytes.Buffer
-		err := ListSubIssues(mock, "owner", "repo", 1, &buf)
+		got, err := ListSubIssues(mock, "owner", "repo", 1)
 		require.NoError(t, err)
-
-		var got []SubIssueInfo
-		require.NoError(t, json.Unmarshal(buf.Bytes(), &got))
-		assert.Len(t, got, 2)
-		assert.Equal(t, 4, got[0].Number)
-		assert.Equal(t, "review start", got[0].Title)
-		assert.Equal(t, "OPEN", got[0].State)
+		assert.Len(t, got.SubIssues, 2)
+		assert.Equal(t, 2, got.TotalCount)
+		assert.Equal(t, 4, got.SubIssues[0].Number)
+		assert.Equal(t, "review start", got.SubIssues[0].Title)
+		assert.Equal(t, "OPEN", got.SubIssues[0].State)
 	})
 
 	t.Run("empty list", func(t *testing.T) {
@@ -192,12 +175,9 @@ func TestListSubIssues(t *testing.T) {
 			},
 		}
 
-		var buf bytes.Buffer
-		err := ListSubIssues(mock, "owner", "repo", 1, &buf)
+		got, err := ListSubIssues(mock, "owner", "repo", 1)
 		require.NoError(t, err)
-
-		output := strings.TrimSpace(buf.String())
-		assert.Equal(t, "[]", output)
+		assert.Empty(t, got.SubIssues)
 	})
 
 	t.Run("api error", func(t *testing.T) {
@@ -211,8 +191,7 @@ func TestListSubIssues(t *testing.T) {
 			},
 		}
 
-		var buf bytes.Buffer
-		err := ListSubIssues(mock, "owner", "repo", 1, &buf)
+		_, err := ListSubIssues(mock, "owner", "repo", 1)
 		assert.ErrorContains(t, err, "server error")
 	})
 }
