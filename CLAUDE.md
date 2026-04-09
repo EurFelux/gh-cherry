@@ -46,6 +46,7 @@ prek install
 ## Development Rules
 
 - Every feature must have a plan approved by the user before implementation
+- Use **TDD (Test-Driven Development)**: write tests first, then implement — this applies to all layers including `cmd/` command registration
 - Every feature must include tests
 - Before committing, all changes must be reviewed by the code-reviewer agent until approved
 - PR description must include `Fixes #<issue_number>` to auto-close the related issue
