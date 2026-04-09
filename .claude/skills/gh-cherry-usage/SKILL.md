@@ -26,10 +26,52 @@ Create an issue with a type (Bug, Feature, etc.)
 | `--milestone` | `-m` | string | no | Milestone |
 | `--project` | `-p` | string[] | no | Projects (repeatable) |
 | `--type` | `-T` | string | no | Issue type (e.g. Bug, Feature) |
+| `--parent` | `-P` | int | no | Parent issue number to attach as sub-issue |
 | `--repo` | `-R` | string | no | Repository in owner/repo format |
 
 ```bash
 gh cherry issue create -t "Title" -T Bug -b "Description" -l bug -a octocat
+gh cherry issue create -t "Sub-task" -P 42   # create and attach as sub-issue of #42
+```
+
+#### `gh cherry issue subissue`
+
+Manage sub-issue relationships.
+
+##### `gh cherry issue subissue add <parent-number> <child-number>`
+
+Add a sub-issue to a parent issue.
+
+| Flag | Short | Type | Required | Description |
+|------|-------|------|----------|-------------|
+| `--repo` | `-R` | string | no | Repository in owner/repo format |
+
+```bash
+gh cherry issue subissue add 42 55 [-R owner/repo]
+```
+
+##### `gh cherry issue subissue remove <parent-number> <child-number>`
+
+Remove a sub-issue from a parent issue.
+
+| Flag | Short | Type | Required | Description |
+|------|-------|------|----------|-------------|
+| `--repo` | `-R` | string | no | Repository in owner/repo format |
+
+```bash
+gh cherry issue subissue remove 42 55 [-R owner/repo]
+```
+
+##### `gh cherry issue subissue list <issue-number>`
+
+List sub-issues of an issue.
+
+| Flag | Short | Type | Required | Description |
+|------|-------|------|----------|-------------|
+| `--repo` | `-R` | string | no | Repository in owner/repo format |
+
+```bash
+gh cherry issue subissue list 42 [-R owner/repo]
 ```
 
 #### `gh cherry issue types`
@@ -224,7 +266,8 @@ Typical flow for reviewing a PR:
 | Flag | Short | Available on | Purpose |
 |------|-------|-------------|---------|
 | `--jq` | | all JSON-outputting commands (all review commands) | Filter JSON output with a jq expression |
-| `--repo` | `-R` | start, view, thread list, pr diff, issue create, issue types | Target a different repo (owner/repo) |
+| `--repo` | `-R` | start, view, thread list, pr diff, issue create, issue types, issue subissue add/remove/list | Target a different repo (owner/repo) |
+| `--parent` | `-P` | issue create | Attach new issue as sub-issue of a parent |
 | `--body` | `-b` | start, submit, edit, thread add/reply/edit-comment, issue create | Inline text |
 | `--body-file` | | start, submit, edit, thread add/reply/edit-comment | Read text from file (mutually exclusive with -b) |
 
