@@ -50,6 +50,7 @@ prek install
 - Before committing, all changes must be reviewed by the code-reviewer agent until approved
 - PR description must include `Fixes #<issue_number>` to auto-close the related issue
 - Resolving CHANGELOG.md merge conflicts: must preserve all existing entries, never drop historical records
+- When adding new business logic in `internal/`, always register the corresponding CLI subcommand in `cmd/` — unregistered functions are invisible to users
 
 ## Branching & Merge Strategy
 
