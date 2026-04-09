@@ -106,6 +106,122 @@ func TestParseRepoFlag(t *testing.T) {
 	}
 }
 
+func TestAddAsSubIssue(t *testing.T) {
+	// buildMock creates a mock that handles: GetIssueNodeID(parent), GetIssueNodeID(child), AddSubIssue mutation.
+	buildMock := func(t *testing.T, parentNum, childNum int, parentNodeID, childNodeID string) *mockQuerier {
+		t.Helper()
+		call := 0
+		return &mockQuerier{
+			queryFunc: func(_ string, variables map[string]interface{}, result interface{}) error {
+				call++
+				switch call {
+				case 1: // GetIssueNodeID for parent
+					assert.Equal(t, parentNum, variables["number"])
+					type respType = struct {
+						Repository struct {
+							Issue struct {
+								ID string `json:"id"`
+							} `json:"issue"`
+						} `json:"repository"`
+					}
+					r := result.(*respType)
+					r.Repository.Issue.ID = parentNodeID
+					return nil
+				case 2: // GetIssueNodeID for child
+					assert.Equal(t, childNum, variables["number"])
+					type respType = struct {
+						Repository struct {
+							Issue struct {
+								ID string `json:"id"`
+							} `json:"issue"`
+						} `json:"repository"`
+					}
+					r := result.(*respType)
+					r.Repository.Issue.ID = childNodeID
+					return nil
+				case 3: // AddSubIssue mutation
+					assert.Equal(t, parentNodeID, variables["issueId"])
+					assert.Equal(t, childNodeID, variables["subIssueId"])
+					return nil
+				default:
+					t.Fatalf("unexpected call %d", call)
+					return nil
+				}
+			},
+		}
+	}
+
+	t.Run("success", func(t *testing.T) {
+		mock := buildMock(t, 2, 10, "I_parent", "I_child")
+		opts := CreateOptions{
+			Parent: 2,
+			Repo:   "owner/repo",
+			Client: mock,
+		}
+		err := addAsSubIssue(opts, "https://github.com/owner/repo/issues/10")
+		require.NoError(t, err)
+	})
+
+	t.Run("parent not found", func(t *testing.T) {
+		mock := &mockQuerier{
+			queryFunc: func(_ string, _ map[string]interface{}, _ interface{}) error {
+				return nil
+			},
+		}
+		opts := CreateOptions{
+			Parent: 999,
+			Repo:   "owner/repo",
+			Client: mock,
+		}
+		err := addAsSubIssue(opts, "https://github.com/owner/repo/issues/10")
+		assert.ErrorContains(t, err, "resolve parent issue")
+	})
+
+	t.Run("invalid issue URL", func(t *testing.T) {
+		mock := &mockQuerier{}
+		opts := CreateOptions{
+			Parent: 2,
+			Repo:   "owner/repo",
+			Client: mock,
+		}
+		err := addAsSubIssue(opts, "not-a-url")
+		assert.Error(t, err)
+	})
+
+	t.Run("mutation fails", func(t *testing.T) {
+		call := 0
+		mock := &mockQuerier{
+			queryFunc: func(_ string, _ map[string]interface{}, result interface{}) error {
+				call++
+				switch call {
+				case 1, 2:
+					type respType = struct {
+						Repository struct {
+							Issue struct {
+								ID string `json:"id"`
+							} `json:"issue"`
+						} `json:"repository"`
+					}
+					r := result.(*respType)
+					r.Repository.Issue.ID = fmt.Sprintf("I_%d", call)
+					return nil
+				case 3:
+					return fmt.Errorf("insufficient permissions")
+				default:
+					return nil
+				}
+			},
+		}
+		opts := CreateOptions{
+			Parent: 2,
+			Repo:   "owner/repo",
+			Client: mock,
+		}
+		err := addAsSubIssue(opts, "https://github.com/owner/repo/issues/10")
+		assert.ErrorContains(t, err, "insufficient permissions")
+	})
+}
+
 func TestGetIssueNodeID(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		mock := &mockQuerier{

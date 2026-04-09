@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Restore `--parent` / `-P` flag on `issue create` lost during PR #21 merge conflict resolution
+
 ### Added
 
 - `gh cherry issue subissue add/remove/list` CLI commands to manage sub-issue relationships
