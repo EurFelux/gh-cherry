@@ -20,6 +20,7 @@ type CreateOptions struct {
 	Milestone string
 	Projects  []string
 	Type      string
+	Parent    int
 	Repo      string
 	Client    ghcli.Querier
 }
@@ -63,6 +64,14 @@ func Create(opts CreateOptions) error {
 		fmt.Printf("Issue type set to %q\n", opts.Type)
 	}
 
+	if opts.Parent > 0 {
+		if err := addAsSubIssue(opts, issueURL); err != nil {
+			fmt.Printf("Warning: issue created but failed to add as sub-issue of #%d: %v\n", opts.Parent, err)
+		} else {
+			fmt.Printf("Added as sub-issue of #%d\n", opts.Parent)
+		}
+	}
+
 	return nil
 }
 
@@ -93,6 +102,21 @@ func setTypeForNewIssue(opts CreateOptions, issueURL string) error {
 	}
 
 	return SetType(opts.Client, nodeID, issueType.ID)
+}
+
+func addAsSubIssue(opts CreateOptions, issueURL string) error {
+	owner, repo, err := ResolveRepo(opts.Repo)
+	if err != nil {
+		return err
+	}
+
+	number, err := ExtractIssueNumber(issueURL)
+	if err != nil {
+		return err
+	}
+
+	_, err = AddSubIssue(opts.Client, owner, repo, opts.Parent, number)
+	return err
 }
 
 // ExtractIssueNumber extracts the issue number from a GitHub issue URL.
