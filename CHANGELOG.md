@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Add `cmd/` package tests covering command registration, flag registration, and command tree structure
+
 ### Fixed
 
 - Restore `--parent` / `-P` flag on `issue create` lost during PR #21 merge conflict resolution
